@@ -9,7 +9,7 @@ public class Produit {
     private String nom;
     private String description;
     private double prix;
-    private String image;
+    private String image; // Peut contenir le nom du fichier ou l'URL
 
     @ManyToOne
     @JoinColumn(name = "categorie_id")
