@@ -1,3 +1,4 @@
+
 package com.example.gestionproduits.repository;
 
 import com.example.gestionproduits.model.Categorie;

@@ -1,18 +1,27 @@
 package com.example.gestionproduits.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 
 @Entity
 public class Produit {
-    @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @NotNull
     private String nom;
+
+    @NotNull
     private String description;
+
+    @NotNull
     private double prix;
-    private String image; // Peut contenir le nom du fichier ou l'URL
+
+    private String image;
 
     @ManyToOne
-    @JoinColumn(name = "categorie_id")
+    @JoinColumn(name = "categorie_id", nullable = false)
     private Categorie categorie;
 
     // Getters and Setters

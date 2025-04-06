@@ -3,6 +3,7 @@ package com.example.gestionproduits.controller;
 import com.example.gestionproduits.model.Produit;
 import com.example.gestionproduits.service.ProduitService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -10,9 +11,7 @@ import java.util.List;
 
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.multipart.MultipartFile;
-
-import com.example.gestionproduits.model.Categorie;
-import com.example.gestionproduits.repository.CategorieRepository;
+import com.example.gestionproduits.model.Categorie; // Ensure this import is present
 
 @RestController
 @RequestMapping("/api/produits")
@@ -22,37 +21,48 @@ public class ProduitController {
     @Autowired
     private ProduitService produitService;
 
-    @Autowired
-    private CategorieRepository categorieRepository;
-
     @GetMapping
     public List<Produit> getAll() {
         return produitService.findAll();
     }
 
     @PostMapping(consumes = "multipart/form-data")
-    public Produit create(
+    public ResponseEntity<?> create(
             @RequestParam("nom") String nom,
             @RequestParam("description") String description,
             @RequestParam("prix") double prix,
             @RequestParam(value = "image", required = false) MultipartFile image,
             @RequestParam("categorie_id") Long categorieId) {
-        Produit produit = new Produit();
-        produit.setNom(nom);
-        produit.setDescription(description);
-        produit.setPrix(prix);
+        try {
+            Produit produit = new Produit();
+            produit.setNom(nom);
+            produit.setDescription(description);
+            produit.setPrix(prix);
+            if (image != null && !image.isEmpty()) {
+                produit.setImage(image.getOriginalFilename()); // Save the filename
+            }
+            Categorie categorie = new Categorie(); // Correctly instantiate Categorie
+            categorie.setId(categorieId);
+            produit.setCategorie(categorie);
 
-        // Associer la catégorie
-        Categorie categorie = categorieRepository.findById(categorieId)
-                .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
-        produit.setCategorie(categorie);
-
-        // Gérer l'image
-        if (image != null && !image.isEmpty()) {
-            produit.setImage(image.getOriginalFilename()); // Enregistrer le nom du fichier
+            Produit savedProduit = produitService.save(produit);
+            return ResponseEntity.ok(savedProduit);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erreur lors de la création du produit: " + e.getMessage());
         }
+    }
 
-        return produitService.save(produit);
+    @PostMapping(consumes = "application/json")
+    public ResponseEntity<?> createJson(
+            @RequestBody Produit produit) {
+        try {
+            Produit savedProduit = produitService.save(produit);
+            return ResponseEntity.ok(savedProduit);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body("Erreur lors de la création du produit: " + e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")
@@ -79,18 +89,29 @@ public class ProduitController {
             produit.setNom(nom);
             produit.setDescription(description);
             produit.setPrix(prix);
-
-            // Associer la catégorie
-            Categorie categorie = categorieRepository.findById(categorieId)
-                    .orElseThrow(() -> new IllegalArgumentException("Catégorie non trouvée"));
+            if (image != null && !image.isEmpty()) {
+                produit.setImage(image.getOriginalFilename()); // Save the filename
+            }
+            Categorie categorie = new Categorie(); // Correctly instantiate Categorie
+            categorie.setId(categorieId);
             produit.setCategorie(categorie);
 
-            // Gérer l'image
-            if (image != null && !image.isEmpty()) {
-                produit.setImage(image.getOriginalFilename()); // Enregistrer le nom du fichier
-            }
-
             return ResponseEntity.ok(produitService.save(produit));
+        }).orElse(ResponseEntity.notFound().build());
+    }
+
+    @PutMapping(value = "/{id}", consumes = "application/json")
+    public ResponseEntity<Produit> updateJson(
+            @PathVariable Long id,
+            @RequestBody Produit produit) {
+        return produitService.findById(id).map(existingProduit -> {
+            existingProduit.setNom(produit.getNom());
+            existingProduit.setDescription(produit.getDescription());
+            existingProduit.setPrix(produit.getPrix());
+            existingProduit.setImage(produit.getImage());
+            existingProduit.setCategorie(produit.getCategorie());
+
+            return ResponseEntity.ok(produitService.save(existingProduit));
         }).orElse(ResponseEntity.notFound().build());
     }
 }
